@@ -25,10 +25,11 @@ class TelegramProvider(BaseProvider):
 
         chat_id = update.message.chat_id
         text = update.message.text
+        user_id = update.message.from_user.id
 
-        # Forward the message to main.py
-        await self.core_callback(self, chat_id, text)
-
+        # Forward the message to main.py including the user_id
+        await self.core_callback(self, chat_id, text, user_id)
+        
     async def send_message(self, chat_id, text):
         """Actual send function via the Telegram API."""
         if self.app:
