@@ -1,7 +1,9 @@
 import os
+import asyncio  # Required for gather and running the loop
 from dotenv import load_dotenv
 from router import CommandRouter
 from providers.telegram import TelegramProvider
+from providers.slack import SlackProvider  # Don't forget to import Slack
 
 load_dotenv()
 
@@ -21,7 +23,6 @@ class ModuBot:
         if isinstance(provider, TelegramProvider):
             if self.tg_whitelist and chat_id not in self.tg_whitelist:
                 print(f"[!] Access denied for Telegram ID: {chat_id}")
-                # Optional: await provider.send_message(chat_id, "No access.")
                 return
 
         if provider.is_command(text):
@@ -30,15 +31,30 @@ class ModuBot:
             response = self.router.execute(cmd, args)
             await provider.send_message(chat_id, response)
 
-    def run(self):
+    async def run(self):
+        tasks = []
+        
+        # Telegram Start-Check
         if TelegramProvider.is_configured():
-            # Important: We pass the handle_incoming method as a callback
             tg = TelegramProvider(self.handle_incoming)
             self.providers.append(tg)
-            tg.start()
-        else:
-            print("[!] Telegram Provider not ready. Check key in .env.")
+            # Ensure telegram.py:start() is now 'async def start(self):'
+            tasks.append(tg.start())
+        
+        # Slack Start-Check
+        if SlackProvider.is_configured():
+            sl = SlackProvider(self.handle_incoming)
+            self.providers.append(sl)
+            tasks.append(sl.start())
+
+        if not tasks:
+            print("[!] No providers configured. Please check your .env file.")
+            return
+
+        # Start all configured providers in parallel
+        await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     bot = ModuBot()
-    bot.run()
+    # Correct way to start the async entry point
+    asyncio.run(bot.run())
