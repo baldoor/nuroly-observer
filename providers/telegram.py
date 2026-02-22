@@ -17,7 +17,7 @@ class TelegramProvider(BaseProvider):
         return bool(token and ":" in token) 
 
     async def _handle_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Called by the library with every new message.."""
+        """Called by the library with every new message."""
         if not update.message or not update.message.text:
             return
 
@@ -44,5 +44,5 @@ class TelegramProvider(BaseProvider):
         self.app.add_handler(text_handler)
         self.app.add_handler(cmd_handler)
 
-        print(f"[✔] Telegram Bot Polling gestartet (Prefix: {self.prefix})")
+        print(f"[✔] Telegram Bot polling started (Prefix: {self.prefix})")
         self.app.run_polling()

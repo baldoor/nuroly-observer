@@ -37,7 +37,7 @@ class ModuBot:
             self.providers.append(tg)
             tg.start()
         else:
-            print("[!] Telegram Provider nicht bereit. Key in .env prüfen.")
+            print("[!] Telegram Provider not ready. Check key in .env.")
 
 if __name__ == "__main__":
     bot = ModuBot()
