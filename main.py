@@ -43,24 +43,35 @@ class ModuBot:
             await provider.send_message(chat_id, response)
 
     async def run(self):
+        print(r"""
+ _   _                   _          ___   _                                
+| \ | | _   _  _ __ ___ | | _   _  / _ \ | |__  ___   ___  _ __ __   __ ___ _ __ 
+|  \| || | | || '__/ _ \| || | | || | | || '_ \/ __| / _ \| '__|\ \ / // _ \ '__|
+| |\  || |_| || | | (_) | || |_| || |_| || |_) \__ \|  __/| |    \ V /|  __/ |   
+|_| \_| \__,_||_|  \___/|_| \__, | \___/ |_.__/|___/ \___||_|     \_/  \___|_|   
+                            |___/                                                
+        """)
+        print("[*] Initializing Nuroly-Observer Systems...")
+        print(f"[*] Security: {len(self.tg_whitelist)} users whitelisted for Telegram.")
+        print(f"[*] Security: {len(self.slack_whitelist)} users whitelisted for Slack.")
+
         tasks = []
-        
-        # Telegram Start-Check
+
         if TelegramProvider.is_configured():
             tg = TelegramProvider(self.handle_incoming)
             self.providers.append(tg)
-            # Ensure telegram.py:start() is now 'async def start(self):'
             tasks.append(tg.start())
-        
-        # Slack Start-Check
+
         if SlackProvider.is_configured():
             sl = SlackProvider(self.handle_incoming)
             self.providers.append(sl)
             tasks.append(sl.start())
 
-        if not tasks:
-            print("[!] No providers configured. Please check your .env file.")
-            return
+        if tasks:
+            print("[*] All configured providers are starting up...")
+            await asyncio.gather(*tasks)
+        else:
+            print("[!] Critical Error: No providers (Telegram/Slack) configured. Check your .env file!")
 
         # Start all configured providers in parallel
         await asyncio.gather(*tasks)
