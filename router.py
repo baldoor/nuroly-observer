@@ -4,12 +4,20 @@ import importlib
 class CommandRouter:
     def __init__(self):
         self.commands = {}
-        # Wir laden Befehle aus beiden Ordnern
+        
+        # Mapping: Alias -> Actual command name
+        self.mapping = {
+            "p": "ping",
+            "h": "help",
+            "start": "help"
+        }
+        
+        # Load commands from both directories
         self._load_commands("commands")
         self._load_commands("custom_commands")
 
     def _load_commands(self, directory):
-        # Wenn der Ordner (z.B. custom_commands) nicht existiert, überspringen wir ihn einfach
+        # Skip if directory (e.g., custom_commands) does not exist
         if not os.path.exists(directory):
             return
 
@@ -26,9 +34,12 @@ class CommandRouter:
                     print(f"[!] Failed to load command '{command_name}': {e}")
 
     def execute(self, command, args):
-        if command in self.commands:
+        # Resolve alias to actual command name (fallback to the command itself if no alias exists)
+        target = self.mapping.get(command, command)
+        
+        if target in self.commands:
             try:
-                return self.commands[command](args)
+                return self.commands[target](args)
             except Exception as e:
-                return f"Error executing '{command}': {str(e)}"
+                return f"Error executing '{target}': {str(e)}"
         return f"Unknown command: {command}. Type 'help' for available commands."
