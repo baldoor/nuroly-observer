@@ -73,8 +73,6 @@ class ModuBot:
         else:
             print("[!] Critical Error: No providers (Telegram/Slack) configured. Check your .env file!")
 
-        # Start all configured providers in parallel
-        await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     bot = ModuBot()

@@ -1,2 +1,2 @@
 def execute(args):
-    return "Pong! 🏓"
+    return "Pong!"
