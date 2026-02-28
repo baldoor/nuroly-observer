@@ -8,8 +8,8 @@ It is designed to run concurrently on multiple platforms (like Telegram and Slac
 - **Multi-Platform Support:** Runs on Telegram and Slack simultaneously using non-blocking `asyncio`.
 - **Security:** Strict User-ID based whitelists ensure that only authorized users can execute commands.
 - **Plug-and-Play Commands:** Add new functionality by simply dropping a `.py` file into the commands directory. No need to touch the core routing logic.
-- **Private ChatOps (`custom_commands/`):** Features a built-in two-folder architecture. Keep your generic commands in `commands/` for the public, and put your private infrastructure scripts into `custom_commands/` (which is safely ignored by Git).
-- **Command Aliases:** Built-in alias mapping (e.g., type `!p` to execute the `ping` command).
+- **Private by Default:** All command files are automatically gitignored, keeping your infrastructure scripts safe from accidental commits.
+- **Command Aliases:** Each command can define its own shortcuts (e.g., type `!p` to execute the `ping` command).
 
 ---
 
@@ -20,8 +20,8 @@ nuroly-observer/
 ├── main.py                 # Core engine (async orchestration & security checks)
 ├── router.py               # Dynamic module loader and command aliasing
 ├── providers/              # Platform-specific adapters (Slack, Telegram, etc.)
-├── commands/               # Public commands (e.g., ping.py, help.py)
-├── custom_commands/        # PRIVATE commands (ignored by git - for your server scripts)
+├── commands/               # Your bot commands (gitignored - only structure tracked)
+├── examples/               # Command templates and examples
 ├── docs/                   # Setup guides and documentation
 ├── .env.example            # Template for your secrets and API keys
 └── requirements.txt        # Python dependencies
@@ -76,7 +76,7 @@ You should see terminal outputs confirming that the security whitelists are load
 
 ## Writing Commands
 
-Creating a new command is incredibly simple. Create a `.py` file matching your command name in either the `commands/` or `custom_commands/` folder.
+Creating a new command is incredibly simple. Create a `.py` file matching your command name in the `commands/` folder.
 
 **Example: `commands/hello.py`**
 
@@ -108,6 +108,8 @@ The router automatically loads these aliases when starting. No need to modify th
 
 ## Security & Best Practices
 
-If you use this bot to execute system commands (like a ping check, restarting Docker containers, etc.):
-1. **Always** place those scripts inside the `custom_commands/` directory. Git is configured to ignore this folder, preventing accidental leaks of IPs, paths, or passwords.
-2. Ensure your `.env` contains **only your User ID** in the whitelist. The bot drops any message from unlisted users before it even reaches the command router.
+1. **Commands are Private by Default:** All `.py` files in `commands/` are automatically gitignored. Only the directory structure (`.gitkeep`, `README.md`) is tracked. This prevents accidental leaks of IPs, paths, or sensitive credentials in your infrastructure scripts.
+
+2. **Whitelist Only Trusted Users:** Ensure your `.env` contains **only your User ID** in the whitelist. The bot drops any message from unlisted users before it even reaches the command router.
+
+3. **Use the Template:** Check `examples/command_template.py` for a ready-to-use command skeleton with best practices.
