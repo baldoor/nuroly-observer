@@ -1,6 +1,6 @@
 import os
 import asyncio
-from telegram import Update
+from telegram import Update, BotCommand
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from .base import BaseProvider
 
@@ -48,11 +48,44 @@ class TelegramProvider(BaseProvider):
 
         # Initialize and start the application manually to avoid blocking
         await self.app.initialize()
+        
+        # Dynamically set bot commands menu from router
+        await self._set_bot_commands()
+        
         await self.app.start()
         await self.app.updater.start_polling()
 
         print(f"[✔] Telegram Bot polling started (Prefix: {self.prefix})")
+        print(f"[✔] Bot command menu updated with {len(self.app.bot_data.get('commands', []))} commands")
         
         # Keep the task alive so asyncio.gather doesn't finish immediately
         while True:
             await asyncio.sleep(3600)
+    
+    async def _set_bot_commands(self):
+        """Dynamically generate and set Telegram bot command menu from available commands."""
+        try:
+            from router import CommandRouter
+            router = CommandRouter()
+            
+            bot_commands = []
+            for cmd_name in sorted(router.commands.keys()):
+                module = router.commands[cmd_name]
+                # Get description (fallback to docstring or generic text)
+                description = getattr(module, 'description', None)
+                if not description and hasattr(module, 'execute') and module.execute.__doc__:
+                    description = module.execute.__doc__.strip().split('\n')[0]
+                if not description:
+                    description = f"Execute {cmd_name} command"
+                
+                # Telegram command descriptions have a 256 character limit
+                description = description[:256]
+                bot_commands.append(BotCommand(cmd_name, description))
+            
+            # Set commands in Telegram
+            await self.app.bot.set_my_commands(bot_commands)
+            self.app.bot_data['commands'] = bot_commands
+            
+            print(f"[*] Telegram: Registered {len(bot_commands)} commands in bot menu")
+        except Exception as e:
+            print(f"[!] Failed to set Telegram bot commands: {e}")

@@ -9,6 +9,9 @@ and rename it according to your command.
 # Example: aliases = ["m", "msg"]
 aliases = []
 
+# Optional: Short description shown in help menu
+description = "Brief description of what this command does"
+
 def execute(args):
     """
     Main function executed when the command is called.

@@ -11,6 +11,7 @@ int/
 
 # Ignore all command files (user-specific)
 commands/*
-# But keep directory structure and documentation
+# But keep directory structure, documentation, and core commands
 !commands/.gitkeep
 !commands/README.md
+!commands/help.py

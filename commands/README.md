@@ -10,6 +10,9 @@ Create a `.py` file with the following structure:
 # Optional: Define shortcuts for this command
 aliases = ["shortcut"]
 
+# Optional: Short description for help menu
+description = "Brief description of what this command does"
+
 def execute(args):
     """
     Main function called when the command is executed.
@@ -34,6 +37,16 @@ Add an `aliases` list at the top of your file to enable shortcuts:
 ```python
 aliases = ["p", "pg"]  # Command can be called with these shortcuts
 ```
+
+## Command Descriptions
+
+Add a `description` field to make your command visible in the help menu:
+
+```python
+description = "Check if a host is reachable via ICMP ping"
+```
+
+The help command (`!help` or `!h`) will display all commands with their aliases and descriptions.
 
 ## Examples
 
