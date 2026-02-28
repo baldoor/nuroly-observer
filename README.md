@@ -6,7 +6,7 @@ It is designed to run concurrently on multiple platforms (like Telegram and Slac
 ## Key Features
 
 - **Multi-Platform Support:** Runs on Telegram and Slack simultaneously using non-blocking `asyncio`.
-- **Bulletproof Security:** Strict User-ID based whitelists ensure that only authorized users can execute commands.
+- **Security:** Strict User-ID based whitelists ensure that only authorized users can execute commands.
 - **Plug-and-Play Commands:** Add new functionality by simply dropping a `.py` file into the commands directory. No need to touch the core routing logic.
 - **Private ChatOps (`custom_commands/`):** Features a built-in two-folder architecture. Keep your generic commands in `commands/` for the public, and put your private infrastructure scripts into `custom_commands/` (which is safely ignored by Git).
 - **Command Aliases:** Built-in alias mapping (e.g., type `!p` to execute the `ping` command).
@@ -81,6 +81,9 @@ Creating a new command is incredibly simple. Create a `.py` file matching your c
 **Example: `commands/hello.py`**
 
 ```python
+# Optional: Define shortcuts for your command
+aliases = ["hi", "hey"]
+
 def execute(args):
     """
     args: A list of arguments passed after the command.
@@ -91,7 +94,17 @@ def execute(args):
     return "Hello there!"
 ```
 
-Once saved, the command is instantly available via `!hello` (on Slack) or `/hello` (on Telegram) upon the next bot restart.
+Once saved, the command is instantly available via `!hello`, `!hi`, or `!hey` (on Slack) or `/hello`, `/hi`, `/hey` (on Telegram) upon the next bot restart.
+
+### Command Aliases
+
+Each command can define its own aliases (shortcuts). Simply add an `aliases` list at the top of your command file:
+
+```python
+aliases = ["p", "pg"]  # Now your command works with shortcuts!
+```
+
+The router automatically loads these aliases when starting. No need to modify the core code!
 
 ## Security & Best Practices
 

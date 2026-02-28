@@ -1,45 +1,65 @@
-import os
 import importlib
+import os
+import sys
+import logging
 
 class CommandRouter:
     def __init__(self):
         self.commands = {}
-        
-        # Mapping: Alias -> Actual command name
-        self.mapping = {
-            "p": "ping",
-            "h": "help",
-            "start": "help"
-        }
-        
-        # Load commands from both directories
-        self._load_commands("commands")
-        self._load_commands("custom_commands")
+        self.mapping = {}  # Automatically loaded from command modules
+        self.load_commands()
 
-    def _load_commands(self, directory):
-        # Skip if directory (e.g., custom_commands) does not exist
-        if not os.path.exists(directory):
+    def load_commands(self):
+        """
+        Dynamically loads all .py files from the commands/ directory.
+        Commands can optionally define an 'aliases' list for shortcuts.
+        """
+        self.commands.clear()
+        self.mapping.clear()
+        
+        # Path to the commands directory
+        commands_dir = os.path.join(os.path.dirname(__file__), "commands")
+        
+        if not os.path.exists(commands_dir):
+            os.makedirs(commands_dir)
             return
 
-        for filename in os.listdir(directory):
+        for filename in os.listdir(commands_dir):
             if filename.endswith(".py") and not filename.startswith("__"):
-                command_name = filename[:-3]
-                module_path = f"{directory}.{command_name}"
+                module_name = filename[:-3]
                 try:
-                    module = importlib.import_module(module_path)
+                    full_module_path = f"commands.{module_name}"
+                    
+                    # If the module was already loaded, force a reload
+                    if full_module_path in sys.modules:
+                        module = importlib.reload(sys.modules[full_module_path])
+                    else:
+                        module = importlib.import_module(full_module_path)
+                    
                     if hasattr(module, "execute"):
-                        self.commands[command_name] = module.execute
-                        print(f"[*] Command '{command_name}' loaded from {directory}.")
+                        self.commands[module_name] = module
+                        logging.info(f"[*] Loaded command: {module_name}")
+                        
+                        # Load aliases from the command module
+                        if hasattr(module, "aliases"):
+                            for alias in module.aliases:
+                                self.mapping[alias] = module_name
+                                logging.info(f"[*]   └─ Alias: {alias} -> {module_name}")
                 except Exception as e:
-                    print(f"[!] Failed to load command '{command_name}': {e}")
+                    logging.error(f"[!] Failed to load command {module_name}: {e}")
 
-    def execute(self, command, args):
-        # Resolve alias to actual command name (fallback to the command itself if no alias exists)
-        target = self.mapping.get(command, command)
+    def execute(self, command_name, args):
+        """
+        Finds and executes the command. Fixes the AttributeError from main.py.
+        """
+        # Check for aliases (e.g. 'p' -> 'ping')
+        target = self.mapping.get(command_name, command_name)
         
         if target in self.commands:
             try:
-                return self.commands[target](args)
+                return self.commands[target].execute(args)
             except Exception as e:
-                return f"Error executing '{target}': {str(e)}"
-        return f"Unknown command: {command}. Type 'help' for available commands."
+                logging.error(f"Error executing {target}: {e}")
+                return f"⚠️ Error in command '{target}': {str(e)}"
+        
+        return f"Unknown command: {command_name}"

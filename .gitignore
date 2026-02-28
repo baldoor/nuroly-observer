@@ -10,5 +10,5 @@ Thumbs.db
 int/
 
 # Ignore private custom commands
-custom_commands/*
-!custom_commands/.keep
+commands/*
+!commands/
