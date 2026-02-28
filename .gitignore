@@ -9,6 +9,8 @@ Thumbs.db
 
 int/
 
-# Ignore private custom commands
+# Ignore all command files (user-specific)
 commands/*
-!commands/
+# But keep directory structure and documentation
+!commands/.gitkeep
+!commands/README.md
