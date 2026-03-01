@@ -5,12 +5,7 @@ import logging
 import traceback
 from typing import Dict, List, Optional
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+# Get logger instance
 logger = logging.getLogger(__name__)
 
 
@@ -22,8 +17,19 @@ class CommandRouter:
         self.debug_mode = debug_mode
         self.execution_stats = {"success": 0, "failed": 0}
         
+        # Configure logging based on debug mode
+        if not logging.getLogger().handlers:
+            # Only configure if not already configured
+            logging.basicConfig(
+                level=logging.DEBUG if debug_mode else logging.WARNING,
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+        
+        # Set logger level for this module
+        logger.setLevel(logging.DEBUG if debug_mode else logging.WARNING)
+        
         if self.debug_mode:
-            logger.setLevel(logging.DEBUG)
             logger.debug("[DEBUG] Debug mode enabled")
         
         self.load_commands()
