@@ -9,7 +9,9 @@ load_dotenv()
 
 class ModuBot:
     def __init__(self):
-        self.router = CommandRouter()
+        # Enable debug mode if DEBUG=true in .env
+        debug_mode = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
+        self.router = CommandRouter(debug_mode=debug_mode)
         self.providers = []
         
         # Load Telegram whitelist

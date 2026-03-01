@@ -64,6 +64,7 @@ Open the `.env` file and configure your tokens and security whitelists:
 - **`TELEGRAM_ALLOWED_USERS`**: Your numeric Telegram User-ID (e.g., `123456789`).
 - **`SLACK_ALLOWED_USERS`**: Your alphanumeric Slack Member-ID (e.g., `U0123ABCD`).
 - **Prefixes**: Choose your preferred command triggers (e.g., `/` for Telegram, `!` for Slack).
+- **`DEBUG`**: Set to `true` to enable detailed error logs with stack traces (default: `false`).
 
 ### 4. Run the Bot
 
@@ -72,6 +73,92 @@ python main.py
 ```
 
 You should see terminal outputs confirming that the security whitelists are loaded and the bots have successfully started polling.
+
+---
+
+## Debugging & Troubleshooting
+
+### Debug Mode
+
+Nuroly-Observer includes a comprehensive debug mode to help diagnose issues with commands or the bot itself.
+
+**Enable Debug Mode:**
+
+Set `DEBUG=true` in your `.env` file:
+
+```dotenv
+DEBUG=true
+```
+
+**What Debug Mode Provides:**
+
+- ✅ **Detailed Command Loading**: See exactly which commands load successfully and which fail
+- ✅ **Full Stack Traces**: Get complete error traces when commands fail to import or execute
+- ✅ **Alias Tracking**: Monitor alias registration and detect conflicts
+- ✅ **Execution Logging**: Track every command execution with arguments
+- ✅ **Module Validation**: Detailed checks for required functions, valid aliases, and proper structure
+
+**Example Output (Debug Mode ON):**
+
+```
+2026-03-01 17:36:44 - DEBUG - [DEBUG] Debug mode enabled
+2026-03-01 17:36:44 - INFO - [*] Loading commands from .../commands...
+2026-03-01 17:36:44 - DEBUG - [*] Importing module: help
+2026-03-01 17:36:44 - INFO - [✓] Loaded: help - List all available commands
+2026-03-01 17:36:44 - DEBUG -     └─ Alias: h -> help
+2026-03-01 17:36:44 - ERROR - [!] Failed to import 'mycommand': Import error: No module named 'requests'
+2026-03-01 17:36:44 - DEBUG - Traceback (most recent call last):
+  ...
+ModuleNotFoundError: No module named 'requests'
+```
+
+### Error Handling Features
+
+The command router includes intelligent error handling:
+
+**1. Graceful Degradation**
+- Failed commands don't crash the entire bot
+- Other commands continue to work normally
+- Clear error messages for missing dependencies
+
+**2. Command Validation**
+- Checks for required `execute()` function
+- Validates alias structure and types
+- Detects alias conflicts between commands
+
+**3. Smart Error Messages**
+- Suggests similar commands on typos
+- Provides context-aware error details
+- User-friendly emoji indicators (✅ ❌ ⚠️)
+
+**4. Execution Statistics**
+- Tracks successful vs. failed command executions
+- Monitors loaded commands and registered aliases
+- Provides runtime diagnostics
+
+### Common Issues
+
+**Command not loading?**
+1. Enable debug mode to see the full error
+2. Check if all required modules are installed: `pip install -r requirements.txt`
+3. Verify your command has an `execute(args)` function
+4. Ensure the file ends with `.py` and doesn't start with `__`
+
+**Missing module error?**
+```
+ModuleNotFoundError: No module named 'psutil'
+```
+Install the missing package:
+```bash
+pip install psutil
+```
+
+**Alias conflicts?**
+The router will warn you if an alias conflicts with a command name or another alias:
+```
+[!] Alias conflict: 'h' from 'mycommand' already mapped to 'help'
+```
+Choose a different alias in your command file.
 
 ---
 
