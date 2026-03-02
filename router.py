@@ -3,7 +3,25 @@ import os
 import sys
 import logging
 import traceback
+import asyncio
+import time
 from typing import Dict, List, Optional
+
+# Import custom exceptions and config
+try:
+    from exceptions import CommandTimeoutError
+    from config import Config
+except ImportError:
+    # Fallback if not available
+    class CommandTimeoutError(Exception):
+        pass
+    
+    class Config:
+        DEFAULT_COMMAND_TIMEOUT = 30
+        
+        @staticmethod
+        def get_command_timeout(command_name: str) -> int:
+            return 30
 
 # Get logger instance
 logger = logging.getLogger(__name__)
@@ -15,7 +33,12 @@ class CommandRouter:
         self.mapping: Dict[str, str] = {}  # Alias -> Command mapping
         self.failed_commands: List[str] = []  # Track failed command loads
         self.debug_mode = debug_mode
-        self.execution_stats = {"success": 0, "failed": 0}
+        self.execution_stats = {
+            "success": 0,
+            "failed": 0,
+            "timeout": 0,
+            "total_execution_time": 0.0,
+        }
         
         # Configure logging based on debug mode
         if not logging.getLogger().handlers:
@@ -185,9 +208,42 @@ class CommandRouter:
         
         return loaded_count
 
+    async def _execute_with_timeout(self, command_module, args: List[str], timeout: int) -> str:
+        """
+        Execute command with timeout handling.
+        
+        Args:
+            command_module: The command module to execute
+            args: Command arguments
+            timeout: Timeout in seconds
+            
+        Returns:
+            Command output as string
+            
+        Raises:
+            CommandTimeoutError: If execution exceeds timeout
+            Exception: Any exception from command execution
+        """
+        # Check if command is async
+        if asyncio.iscoroutinefunction(command_module.execute):
+            # Async command
+            result = await asyncio.wait_for(
+                command_module.execute(args),
+                timeout=timeout
+            )
+        else:
+            # Sync command - run in executor to make it awaitable
+            loop = asyncio.get_event_loop()
+            result = await asyncio.wait_for(
+                loop.run_in_executor(None, command_module.execute, args),
+                timeout=timeout
+            )
+        
+        return result
+
     def execute(self, command_name: str, args: List[str]) -> str:
         """
-        Finds and executes the command with improved error handling.
+        Finds and executes the command with timeout and improved error handling.
         
         Args:
             command_name: The command or alias to execute
@@ -215,11 +271,28 @@ class CommandRouter:
             
             return f"❌ Unknown command: '{command_name}'\nUse 'help' to see available commands."
         
-        # Execute the command
+        # Get timeout for this command
+        timeout = Config.get_command_timeout(target)
+        
+        # Execute the command with timeout
+        start_time = time.time()
+        
         try:
-            logger.debug(f"[*] Executing: {target} with args: {args}")
-            result = self.commands[target].execute(args)
+            logger.debug(f"[*] Executing: {target} with args: {args} (timeout: {timeout}s)")
+            
+            # Run async execution
+            result = asyncio.run(self._execute_with_timeout(
+                self.commands[target],
+                args,
+                timeout
+            ))
+            
+            # Track execution time
+            elapsed = time.time() - start_time
             self.execution_stats["success"] += 1
+            self.execution_stats["total_execution_time"] += elapsed
+            
+            logger.debug(f"[✓] Command '{target}' completed in {elapsed:.2f}s")
             
             # Validate result
             if result is None:
@@ -228,8 +301,37 @@ class CommandRouter:
             
             return str(result)
             
+        except asyncio.TimeoutError:
+            elapsed = time.time() - start_time
+            self.execution_stats["timeout"] += 1
+            self.execution_stats["total_execution_time"] += elapsed
+            
+            error_msg = f"Command '{target}' exceeded timeout of {timeout}s"
+            logger.warning(
+                f"[!] Command timeout: {target}",
+                extra={
+                    'command': target,
+                    'timeout': timeout,
+                    'elapsed': elapsed,
+                }
+            )
+            
+            # User-friendly error message
+            return (
+                f"⏱️ **Command Timeout**\n\n"
+                f"Der Command '{target}' wurde nach {timeout} Sekunden automatisch abgebrochen.\n\n"
+                f"**Mögliche Ursachen:**\n"
+                f"• Netzwerkprobleme\n"
+                f"• Zu große Datenmenge\n"
+                f"• System überlastet\n\n"
+                f"Bitte versuche es später erneut oder kontaktiere einen Admin."
+            )
+            
         except TypeError as e:
+            elapsed = time.time() - start_time
             self.execution_stats["failed"] += 1
+            self.execution_stats["total_execution_time"] += elapsed
+            
             error_msg = f"Argument error: {str(e)}"
             logger.error(f"[!] {target}: {error_msg}")
             
@@ -240,7 +342,10 @@ class CommandRouter:
             return f"⚠️ Error in command '{target}': {error_msg}"
             
         except Exception as e:
+            elapsed = time.time() - start_time
             self.execution_stats["failed"] += 1
+            self.execution_stats["total_execution_time"] += elapsed
+            
             error_type = type(e).__name__
             error_msg = str(e)
             logger.error(f"[!] {target} failed: {error_type}: {error_msg}")
@@ -253,13 +358,28 @@ class CommandRouter:
             return f"⚠️ Error in command '{target}': {error_msg}"
     
     def get_stats(self) -> dict:
-        """Returns execution statistics"""
+        """Returns execution statistics including timeout info"""
+        total_executions = (
+            self.execution_stats["success"] +
+            self.execution_stats["failed"] +
+            self.execution_stats["timeout"]
+        )
+        
+        avg_execution_time = 0.0
+        if total_executions > 0:
+            avg_execution_time = (
+                self.execution_stats["total_execution_time"] / total_executions
+            )
+        
         return {
             "commands_loaded": len(self.commands),
             "aliases_registered": len(self.mapping),
             "failed_loads": len(self.failed_commands),
             "executions_success": self.execution_stats["success"],
             "executions_failed": self.execution_stats["failed"],
+            "executions_timeout": self.execution_stats["timeout"],
+            "total_execution_time": round(self.execution_stats["total_execution_time"], 2),
+            "average_execution_time": round(avg_execution_time, 2),
         }
     
     def list_commands(self) -> List[str]:
@@ -267,7 +387,7 @@ class CommandRouter:
         return sorted(self.commands.keys())
     
     def get_command_info(self, command_name: str) -> Optional[dict]:
-        """Returns detailed info about a specific command"""
+        """Returns detailed info about a specific command including timeout"""
         target = self.mapping.get(command_name, command_name)
         
         if target not in self.commands:
@@ -276,10 +396,12 @@ class CommandRouter:
         module = self.commands[target]
         aliases = getattr(module, "aliases", [])
         description = getattr(module, "description", "No description available")
+        timeout = Config.get_command_timeout(target)
         
         return {
             "name": target,
             "aliases": aliases,
             "description": description,
+            "timeout": timeout,
             "has_execute": hasattr(module, "execute"),
         }
