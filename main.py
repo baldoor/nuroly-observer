@@ -1,9 +1,11 @@
 import os
 import asyncio  # Required for gather and running the loop
+import math
 from dotenv import load_dotenv
 from router import CommandRouter
 from providers.telegram import TelegramProvider
 from providers.slack import SlackProvider  # Don't forget to import Slack
+from rate_limiting import RateLimiter  # Rate limiting support
 
 load_dotenv()
 
@@ -13,6 +15,14 @@ class ModuBot:
         debug_mode = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
         self.router = CommandRouter(debug_mode=debug_mode)
         self.providers = []
+        
+        # Initialize rate limiter
+        rate_limit_max = int(os.getenv("RATE_LIMIT_MAX_TOKENS", "10"))
+        rate_limit_per_min = int(os.getenv("RATE_LIMIT_TOKENS_PER_MINUTE", "10"))
+        self.rate_limiter = RateLimiter(
+            max_tokens=rate_limit_max,
+            tokens_per_minute=rate_limit_per_min
+        )
         
         # Load Telegram whitelist
         raw_allowed = os.getenv("TELEGRAM_ALLOWED_USERS", "")
@@ -24,6 +34,7 @@ class ModuBot:
         
         print(f"[*] Security: {len(self.tg_whitelist)} users whitelisted for Telegram.")
         print(f"[*] Security: {len(self.slack_whitelist)} users whitelisted for Slack.")
+        print(f"[*] Rate Limiting: {rate_limit_max} commands per burst, {rate_limit_per_min} per minute")
 
     async def handle_incoming(self, provider, chat_id, text, sender_id=None):
         # Specific check for Telegram
@@ -36,6 +47,21 @@ class ModuBot:
         if isinstance(provider, SlackProvider):
             if self.slack_whitelist and sender_id not in self.slack_whitelist:
                 print(f"[!] Access denied for Slack User: {sender_id}")
+                return
+
+        # Rate limiting check
+        if sender_id:
+            # Create unique key per provider and user
+            user_key = f"{provider.__class__.__name__}_{sender_id}"
+            limit_check = self.rate_limiter.check_limit(user_key)
+            
+            if not limit_check.allowed:
+                wait_seconds = math.ceil(limit_check.wait_time)
+                print(f"[!] Rate limit exceeded for {user_key}")
+                await provider.send_message(
+                    chat_id,
+                    f"⏱️ Rate limit exceeded! Please wait {wait_seconds} seconds before sending another command."
+                )
                 return
 
         if provider.is_command(text):
