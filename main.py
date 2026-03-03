@@ -67,7 +67,7 @@ class ModuBot:
         if provider.is_command(text):
             cmd = provider.extract_command(text)
             args = text.split()[1:]
-            response = self.router.execute(cmd, args)
+            response = await self.router.execute(cmd, args)
             await provider.send_message(chat_id, response)
 
     async def run(self):

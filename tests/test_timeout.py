@@ -5,7 +5,7 @@ import asyncio
 import time
 from unittest.mock import MagicMock, patch
 from exceptions import CommandTimeoutError
-from config import Config
+from timeouts import get_command_timeout, DEFAULT_COMMAND_TIMEOUT
 
 
 class TestCommandTimeoutError:
@@ -47,38 +47,32 @@ class TestCommandTimeoutError:
         assert "310.25s" in error_str
 
 
-class TestConfig:
-    """Test Config timeout functionality"""
+class TestTimeoutHelpers:
+    """Test timeout helper functionality"""
     
     def test_default_timeout(self):
         """Test default timeout retrieval"""
-        timeout = Config.get_command_timeout("unknown_command")
-        assert timeout == Config.DEFAULT_COMMAND_TIMEOUT
+        timeout = get_command_timeout("unknown_command")
+        assert timeout == DEFAULT_COMMAND_TIMEOUT
     
-    def test_command_specific_timeout(self):
-        """Test command-specific timeout"""
-        Config.COMMAND_TIMEOUTS['test_cmd'] = 60
-        timeout = Config.get_command_timeout("test_cmd")
-        assert timeout == 60
-    
-    def test_set_command_timeout(self):
-        """Test setting timeout at runtime"""
-        Config.set_command_timeout("dynamic_cmd", 120)
-        timeout = Config.get_command_timeout("dynamic_cmd")
-        assert timeout == 120
+    def test_module_default_timeout(self):
+        """Test timeout from module.timeout attribute"""
+        Dummy = type("Dummy", (), {"timeout": 42})
+        timeout = get_command_timeout("some_command", module=Dummy)
+        assert timeout == 42
     
     @patch.dict('os.environ', {'TIMEOUT_ENVTEST': '99'})
     def test_environment_variable_timeout(self):
         """Test timeout from environment variable"""
-        timeout = Config.get_command_timeout("envtest")
+        timeout = get_command_timeout("envtest")
         assert timeout == 99
     
     @patch.dict('os.environ', {'TIMEOUT_INVALID': 'not_a_number'})
     def test_invalid_environment_variable(self):
         """Test handling of invalid environment variable"""
         # Should fall back to default
-        timeout = Config.get_command_timeout("invalid")
-        assert timeout == Config.DEFAULT_COMMAND_TIMEOUT
+        timeout = get_command_timeout("invalid")
+        assert timeout == DEFAULT_COMMAND_TIMEOUT
 
 
 @pytest.mark.asyncio

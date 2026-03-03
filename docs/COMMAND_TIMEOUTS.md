@@ -31,30 +31,28 @@ TIMEOUT_BACKUP=300
 TIMEOUT_REBOOT=120
 ```
 
-**Option 2: Config File (config.py)**
+**Option 2: Per-command default (recommended)**
+
+In each command module you can define a natural default timeout:
 
 ```python
-COMMAND_TIMEOUTS = {
-    'status': 5,
-    'ping': 10,
-    'backup': 300,
-    'reboot': 120,
-}
+# commands/backup.py
+timeout = 300  # seconds
 ```
 
-**Option 3: Runtime Configuration**
+**Option 3: Global default (command_timeout.py)**
 
 ```python
-from config import Config
+from command_timeout import DEFAULT_COMMAND_TIMEOUT
 
-Config.set_command_timeout('my_command', 60)
+print(DEFAULT_COMMAND_TIMEOUT)  # configured via ENV DEFAULT_COMMAND_TIMEOUT
 ```
 
 ### Priority Order
 
 1. Environment variable (`TIMEOUT_<COMMAND_NAME>`)
-2. `COMMAND_TIMEOUTS` dictionary in `config.py`
-3. `DEFAULT_COMMAND_TIMEOUT`
+2. `timeout` attribute in the command module (if present)
+3. `DEFAULT_COMMAND_TIMEOUT` in `command_timeout.py`
 
 ## Usage
 
@@ -84,14 +82,14 @@ When a command times out, you'll see:
 ```
 ⏱️ Command Timeout
 
-Der Command 'backup' wurde nach 300 Sekunden automatisch abgebrochen.
+The command 'backup' was automatically aborted after 300 seconds.
 
-Mögliche Ursachen:
-• Netzwerkprobleme
-• Zu große Datenmenge
-• System überlastet
+Possible causes:
+• Network issues
+• Data set too large
+• System under heavy load
 
-Bitte versuche es später erneut oder kontaktiere einen Admin.
+Please try again later or contact an administrator.
 ```
 
 ## Monitoring
@@ -204,9 +202,9 @@ TIMEOUT_LONG_RUNNING_TASK=600
 ### Components
 
 1. **exceptions.py**: `CommandTimeoutError` exception
-2. **config.py**: Timeout configuration management
+2. **command_timeout.py**: Timeout configuration helpers (global + per-command)
 3. **router.py**: Timeout enforcement in command execution
-4. **tests/test_timeout.py**: Comprehensive test suite
+4. **tests/test_timeout.py**: Timeout-related test suite
 
 ### Flow
 
@@ -215,7 +213,7 @@ User Command
     ↓
 CommandRouter.execute()
     ↓
-Get timeout from Config
+get_command_timeout() from command_timeout.py
     ↓
 _execute_with_timeout()
     ↓
@@ -231,7 +229,7 @@ Log & Return Result
 Minimal overhead:
 - Async wrapper: ~0.1ms
 - Time tracking: ~0.05ms
-- Config lookup: ~0.01ms
+- Timeout lookup: ~0.01ms
 
 Total: **~0.2ms per command execution**
 
