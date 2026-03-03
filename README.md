@@ -13,6 +13,7 @@ It is designed to run concurrently on multiple platforms (like Telegram and Slac
 - **Private by Default:** All command files are automatically gitignored, keeping your infrastructure scripts safe from accidental commits.
 - **Command Aliases:** Each command can define its own shortcuts (e.g., type `!p` to execute the `ping` command).
 - **Dynamic Bot Menus:** Telegram command menu is automatically generated from your commands and descriptions on startup.
+ - **Rate Limiting:** Built-in per-user rate limiting using a token bucket algorithm to prevent command flooding.
 
 ---
 
@@ -22,10 +23,14 @@ It is designed to run concurrently on multiple platforms (like Telegram and Slac
 nuroly-observer/
 ├── main.py                 # Core engine (async orchestration & security checks)
 ├── router.py               # Dynamic module loader and command aliasing
+├── exceptions.py           # Custom exception types
+├── timeouts.py             # Command timeout configuration helpers
 ├── providers/              # Platform-specific adapters (Slack, Telegram, etc.)
 ├── commands/               # Your bot commands (gitignored - only structure tracked)
 ├── examples/               # Command templates and examples
 ├── docs/                   # Setup guides and documentation
+├── rate_limiting/          # Token-bucket rate limiting engine
+├── tests/                  # Test suite
 ├── .env.example            # Template for your secrets and API keys
 └── requirements.txt        # Python dependencies
 ```

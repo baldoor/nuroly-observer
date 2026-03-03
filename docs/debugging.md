@@ -80,7 +80,10 @@ Access with `router.get_stats()`:
     'aliases_registered': 6,
     'failed_loads': 0,
     'executions_success': 42,
-    'executions_failed': 1
+    'executions_failed': 1,
+    'executions_timeout': 0,
+    'total_execution_time': 12.34,
+    'average_execution_time': 0.29
 }
 ```
 
@@ -198,7 +201,7 @@ print(router.list_commands())
 # Get info about a specific command
 info = router.get_command_info('ping')
 print(info)
-# {'name': 'ping', 'aliases': ['p'], 'description': 'ICMP ping', 'has_execute': True}
+# {'name': 'ping', 'aliases': ['p'], 'description': 'ICMP ping', 'timeout': 5}
 
 # Check statistics
 print(router.get_stats())
@@ -209,13 +212,18 @@ print(router.get_stats())
 Test commands without running the full bot:
 
 ```python
+import asyncio
 from router import CommandRouter
 
-router = CommandRouter(debug_mode=True)
 
-# Execute a command directly
-result = router.execute('ping', ['8.8.8.8'])
-print(result)
+async def main():
+    router = CommandRouter(debug_mode=True)
+    # Execute a command directly (async)
+    result = await router.execute('ping', ['8.8.8.8'])
+    print(result)
+
+
+asyncio.run(main())
 ```
 
 ### Logging Configuration

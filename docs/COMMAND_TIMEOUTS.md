@@ -40,10 +40,10 @@ In each command module you can define a natural default timeout:
 timeout = 300  # seconds
 ```
 
-**Option 3: Global default (command_timeout.py)**
+**Option 3: Global default (timeouts.py)**
 
 ```python
-from command_timeout import DEFAULT_COMMAND_TIMEOUT
+from timeouts import DEFAULT_COMMAND_TIMEOUT
 
 print(DEFAULT_COMMAND_TIMEOUT)  # configured via ENV DEFAULT_COMMAND_TIMEOUT
 ```
@@ -52,7 +52,7 @@ print(DEFAULT_COMMAND_TIMEOUT)  # configured via ENV DEFAULT_COMMAND_TIMEOUT
 
 1. Environment variable (`TIMEOUT_<COMMAND_NAME>`)
 2. `timeout` attribute in the command module (if present)
-3. `DEFAULT_COMMAND_TIMEOUT` in `command_timeout.py`
+3. `DEFAULT_COMMAND_TIMEOUT` in `timeouts.py`
 
 ## Usage
 
@@ -202,7 +202,7 @@ TIMEOUT_LONG_RUNNING_TASK=600
 ### Components
 
 1. **exceptions.py**: `CommandTimeoutError` exception
-2. **command_timeout.py**: Timeout configuration helpers (global + per-command)
+2. **timeouts.py**: Timeout configuration helpers (global + per-command)
 3. **router.py**: Timeout enforcement in command execution
 4. **tests/test_timeout.py**: Timeout-related test suite
 
